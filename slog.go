@@ -51,13 +51,15 @@ func New(cfg Config, opts ...Option) *Logger {
 		ReplaceAttr: params.ReplaceAttr,
 	}
 
-	var handler slog.Handler
-	if strings.ToLower(cfg.Format) == "json" {
-		handler = slog.NewJSONHandler(writer, opt)
-	} else {
-		handler = slog.NewTextHandler(writer, opt)
+	if params.Handler == nil {
+		if strings.ToLower(cfg.Format) == "json" {
+			params.Handler = slog.NewJSONHandler(writer, opt)
+		} else {
+			params.Handler = slog.NewTextHandler(writer, opt)
+		}
 	}
-	l := NewLogger(handler)
+
+	l := NewLogger(params.Handler)
 	l.level = params.Level
 	l.writer = params.Writer
 	return l

@@ -49,6 +49,12 @@ level := new(slog.LevelVar)
 wslog.New(cfg, wslog.LevelOption(level))
 ```
 
+You can use a custom handler.
+
+```go
+handler := slog.NewJSONHandler(os.Stdout, nil)
+wslog.New(cfg, wslog.HandlerOption(handler))
+```
 
 You can use a custom writer.
 

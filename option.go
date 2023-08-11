@@ -19,13 +19,14 @@ import (
 	"log/slog"
 )
 
-type ReplaceAttrFunc func(groups []string, a slog.Attr) slog.Attr
-
 type Params struct {
 	Writer      io.Writer
 	Level       slog.Leveler
+	Handler     slog.Handler
 	ReplaceAttr ReplaceAttrFunc
 }
+
+type ReplaceAttrFunc func(groups []string, a slog.Attr) slog.Attr
 
 type Option func(params *Params)
 
@@ -44,6 +45,15 @@ func LevelOption(level slog.Leveler) Option {
 			return
 		}
 		params.Level = level
+	}
+}
+
+func HandlerOption(handler slog.Handler) Option {
+	return func(params *Params) {
+		if handler == nil {
+			return
+		}
+		params.Handler = handler
 	}
 }
 
