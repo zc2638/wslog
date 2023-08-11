@@ -24,6 +24,23 @@ import (
 
 var emptyCtx = context.Background()
 
+// NewLogger creates a new Logger with the given non-nil Handler.
+func NewLogger(h slog.Handler, opts ...any) *Logger {
+	if h == nil {
+		panic("nil Handler")
+	}
+	l := &Logger{handler: h}
+	for _, opt := range opts {
+		switch v := opt.(type) {
+		case slog.Leveler:
+			l.level = v
+		case io.Writer:
+			l.writer = v
+		}
+	}
+	return l
+}
+
 type Logger struct {
 	handler slog.Handler
 	level   slog.Leveler

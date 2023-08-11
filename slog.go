@@ -58,19 +58,7 @@ func New(cfg Config, opts ...Option) *Logger {
 			params.Handler = slog.NewTextHandler(writer, opt)
 		}
 	}
-
-	l := NewLogger(params.Handler)
-	l.level = params.Level
-	l.writer = params.Writer
-	return l
-}
-
-// NewLogger creates a new Logger with the given non-nil Handler.
-func NewLogger(h slog.Handler) *Logger {
-	if h == nil {
-		panic("nil Handler")
-	}
-	return &Logger{handler: h}
+	return NewLogger(params.Handler, params.Level, params.Writer)
 }
 
 var defaultLogger atomic.Value
