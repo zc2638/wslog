@@ -19,11 +19,19 @@ import (
 func main() {
 	cfg := wslog.Confg{
 		Format: "json",
-		Level:  slog.LevelInfo,
+		Level:  wslog.LevelInfo,
 	}
 	l := wslog.New(cfg)
 	l.Info("this is a info log")
 	l.Log(1, "this is a info+1 log")
+}
+```
+
+Support digital definition level.  
+```go
+cfg := wslog.Confg{
+    Format: "json",
+    Level:  "info+2", // equivalent to `slog.LevelInfo+2`
 }
 ```
 

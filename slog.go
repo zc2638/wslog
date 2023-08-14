@@ -24,9 +24,9 @@ import (
 )
 
 type Config struct {
-	Level  slog.Level `json:"level,omitempty" yaml:"level"`
-	Format string     `json:"format,omitempty" yaml:"format"`
-	Source bool       `json:"source,omitempty" yaml:"source,omitempty"`
+	Level  Level  `json:"level,omitempty" yaml:"level,omitempty"`
+	Format string `json:"format,omitempty" yaml:"format,omitempty"`
+	Source bool   `json:"source,omitempty" yaml:"source,omitempty"`
 
 	Filename   string `json:"filename,omitempty" yaml:"filename,omitempty"`
 	MaxSize    int    `json:"maxSize,omitempty" yaml:"maxSize,omitempty"`
@@ -39,7 +39,7 @@ type Config struct {
 func New(cfg Config, opts ...Option) *Logger {
 	writer := NewWriter(cfg)
 	level := new(slog.LevelVar)
-	level.Set(cfg.Level)
+	level.Set(cfg.Level.Level())
 
 	params := &Params{Writer: writer, Level: level}
 	for _, v := range opts {
