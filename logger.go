@@ -144,6 +144,21 @@ func (l *Logger) DebugCtx(ctx context.Context, msg string, args ...any) {
 	l.log(ctx, slog.LevelDebug, msg, args...)
 }
 
+// Print logs at LevelInfo.
+func (l *Logger) Print(msg string, args ...any) {
+	l.log(context.Background(), slog.LevelInfo, msg, args...)
+}
+
+// Printf logs at LevelInfo with the given format.
+func (l *Logger) Printf(format string, args ...any) {
+	l.log(emptyCtx, slog.LevelInfo, fmt.Sprintf(format, args...))
+}
+
+// PrintCtx logs at LevelInfo with the given context.
+func (l *Logger) PrintCtx(ctx context.Context, msg string, args ...any) {
+	l.log(ctx, slog.LevelInfo, msg, args...)
+}
+
 // Info logs at LevelInfo.
 func (l *Logger) Info(msg string, args ...any) {
 	l.log(context.Background(), slog.LevelInfo, msg, args...)
