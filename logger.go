@@ -16,6 +16,7 @@ package wslog
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"log/slog"
 	"runtime"
@@ -26,10 +27,14 @@ var emptyCtx = context.Background()
 
 // NewLogger creates a new Logger with the given non-nil Handler.
 func NewLogger(h slog.Handler, opts ...any) *Logger {
+	return NewLoggerSkip(h, 3, opts...)
+}
+
+func NewLoggerSkip(h slog.Handler, skip int, opts ...any) *Logger {
 	if h == nil {
 		panic("nil Handler")
 	}
-	l := &Logger{handler: h}
+	l := &Logger{handler: h, skip: skip}
 	for _, opt := range opts {
 		switch v := opt.(type) {
 		case slog.Leveler:
@@ -45,6 +50,7 @@ type Logger struct {
 	handler slog.Handler
 	level   slog.Leveler
 	writer  io.Writer
+	skip    int
 }
 
 func (l *Logger) clone() *Logger {
@@ -128,6 +134,11 @@ func (l *Logger) Debug(msg string, args ...any) {
 	l.log(emptyCtx, slog.LevelDebug, msg, args...)
 }
 
+// Debugf logs at LevelDebug with the given format.
+func (l *Logger) Debugf(format string, args ...any) {
+	l.log(emptyCtx, slog.LevelDebug, fmt.Sprintf(format, args...))
+}
+
 // DebugCtx logs at LevelDebug with the given context.
 func (l *Logger) DebugCtx(ctx context.Context, msg string, args ...any) {
 	l.log(ctx, slog.LevelDebug, msg, args...)
@@ -136,6 +147,11 @@ func (l *Logger) DebugCtx(ctx context.Context, msg string, args ...any) {
 // Info logs at LevelInfo.
 func (l *Logger) Info(msg string, args ...any) {
 	l.log(context.Background(), slog.LevelInfo, msg, args...)
+}
+
+// Infof logs at LevelInfo with the given format.
+func (l *Logger) Infof(format string, args ...any) {
+	l.log(emptyCtx, slog.LevelInfo, fmt.Sprintf(format, args...))
 }
 
 // InfoCtx logs at LevelInfo with the given context.
@@ -148,6 +164,11 @@ func (l *Logger) Warn(msg string, args ...any) {
 	l.log(context.Background(), slog.LevelWarn, msg, args...)
 }
 
+// Warnf logs at LevelWarn with the given format.
+func (l *Logger) Warnf(format string, args ...any) {
+	l.log(emptyCtx, slog.LevelWarn, fmt.Sprintf(format, args...))
+}
+
 // WarnCtx logs at LevelWarn with the given context.
 func (l *Logger) WarnCtx(ctx context.Context, msg string, args ...any) {
 	l.log(ctx, slog.LevelWarn, msg, args...)
@@ -155,7 +176,12 @@ func (l *Logger) WarnCtx(ctx context.Context, msg string, args ...any) {
 
 // Error logs at LevelError.
 func (l *Logger) Error(msg string, args ...any) {
-	l.log(context.Background(), slog.LevelError, msg, args...)
+	l.log(emptyCtx, slog.LevelError, msg, args...)
+}
+
+// Errorf logs at LevelError with the given format.
+func (l *Logger) Errorf(format string, args ...any) {
+	l.log(emptyCtx, slog.LevelError, fmt.Sprintf(format, args...))
 }
 
 // ErrorCtx logs at LevelError with the given context.
@@ -173,7 +199,7 @@ func (l *Logger) log(ctx context.Context, level slog.Level, msg string, args ...
 
 	var pcs [1]uintptr
 	// skip [runtime.Callers, this function, this function's caller]
-	runtime.Callers(3, pcs[:])
+	runtime.Callers(l.skip, pcs[:])
 	pc := pcs[0]
 
 	r := slog.NewRecord(time.Now(), level, msg, pc)
@@ -192,7 +218,7 @@ func (l *Logger) logAttrs(ctx context.Context, level slog.Level, msg string, att
 
 	var pcs [1]uintptr
 	// skip [runtime.Callers, this function, this function's caller]
-	runtime.Callers(3, pcs[:])
+	runtime.Callers(l.skip, pcs[:])
 	pc := pcs[0]
 
 	r := slog.NewRecord(time.Now(), level, msg, pc)

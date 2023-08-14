@@ -16,6 +16,7 @@ package wslog
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"os"
 	"strings"
@@ -87,6 +88,11 @@ func Debug(msg string, args ...any) {
 	Default().log(emptyCtx, slog.LevelDebug, msg, args...)
 }
 
+// Debugf calls Logger.Debugf on the default logger.
+func Debugf(format string, args ...any) {
+	Default().log(emptyCtx, slog.LevelDebug, fmt.Sprintf(format, args...))
+}
+
 // DebugCtx calls Logger.DebugCtx on the default logger.
 func DebugCtx(ctx context.Context, msg string, args ...any) {
 	Default().log(ctx, slog.LevelDebug, msg, args...)
@@ -95,6 +101,11 @@ func DebugCtx(ctx context.Context, msg string, args ...any) {
 // Info calls Logger.Info on the default logger.
 func Info(msg string, args ...any) {
 	Default().log(emptyCtx, slog.LevelInfo, msg, args...)
+}
+
+// Infof calls Logger.Infof on the default logger.
+func Infof(format string, args ...any) {
+	Default().log(emptyCtx, slog.LevelInfo, fmt.Sprintf(format, args...))
 }
 
 // InfoCtx calls Logger.InfoCtx on the default logger.
@@ -107,6 +118,11 @@ func Warn(msg string, args ...any) {
 	Default().log(emptyCtx, slog.LevelWarn, msg, args...)
 }
 
+// Warnf calls Logger.Warnf on the default logger.
+func Warnf(format string, args ...any) {
+	Default().log(emptyCtx, slog.LevelWarn, fmt.Sprintf(format, args...))
+}
+
 // WarnCtx calls Logger.WarnCtx on the default logger.
 func WarnCtx(ctx context.Context, msg string, args ...any) {
 	Default().log(ctx, slog.LevelWarn, msg, args...)
@@ -115,6 +131,11 @@ func WarnCtx(ctx context.Context, msg string, args ...any) {
 // Error calls Logger.Error on the default logger.
 func Error(msg string, args ...any) {
 	Default().log(emptyCtx, slog.LevelError, msg, args...)
+}
+
+// Errorf calls Logger.Errorf on the default logger.
+func Errorf(format string, args ...any) {
+	Default().log(emptyCtx, slog.LevelError, fmt.Sprintf(format, args...))
 }
 
 // ErrorCtx calls Logger.ErrorCtx on the default logger.
