@@ -6,6 +6,12 @@ In order to ensure only relying on the standard library, the `lumberjack` packag
 
 If you don't know how to configure log rolling, please refer to [lumberjack](https://github.com/natefinch/lumberjack).
 
+### Installation
+
+```shell
+go get -u github.com/zc2638/wslog
+```
+
 ### Definition
 
 #### Format
