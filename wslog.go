@@ -85,7 +85,7 @@ func New(cfg Config, opts ...any) *Logger {
 		case "text":
 			handler = slog.NewTextHandler(writer, handlerOpts)
 		default:
-			handler = NewLogHandler(writer, handlerOpts)
+			handler = NewLogHandler(writer, handlerOpts, cfg.Colorful)
 		}
 	}
 	return NewLogger(handler)
@@ -94,7 +94,7 @@ func New(cfg Config, opts ...any) *Logger {
 var defaultLogger atomic.Value
 
 func init() {
-	defaultLogger.Store(NewLogger(NewLogHandler(os.Stdout, nil)))
+	defaultLogger.Store(NewLogger(NewLogHandler(os.Stdout, nil, true)))
 }
 
 // Default returns the default Logger.

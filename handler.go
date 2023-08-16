@@ -22,30 +22,34 @@ import (
 	"log/slog"
 	"runtime"
 	"slices"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
 )
 
-func NewLogHandler(w io.Writer, opts *HandlerOptions) Handler {
+func NewLogHandler(w io.Writer, opts *HandlerOptions, colorful bool) Handler {
 	if opts == nil {
 		opts = new(HandlerOptions)
 	}
 	return &logHandler{
-		w:    w,
-		opts: *opts,
-		mu:   new(sync.Mutex),
-		sep:  ".",
+		w:        w,
+		opts:     *opts,
+		mu:       new(sync.Mutex),
+		sep:      ".",
+		colorful: colorful,
 	}
 }
 
 type logHandler struct {
-	w          io.Writer
-	opts       HandlerOptions
-	mu         *sync.Mutex
+	w    io.Writer
+	opts HandlerOptions
+	mu   *sync.Mutex
+
 	sep        string
 	groups     []string
 	attrBuffer bytes.Buffer
+	colorful   bool
 }
 
 func (h *logHandler) clone() *logHandler {
@@ -125,6 +129,7 @@ func (h *logHandler) addAttrs(buf *bytes.Buffer, groups []string, attrs []Attr) 
 			a.Value = a.Value.Resolve()
 			a = raFn(groups, a)
 		}
+		a.Value = a.Value.Resolve()
 
 		// Elide empty Attrs.
 		if a.Key == "" {
@@ -183,7 +188,11 @@ func (h *logHandler) addAttrs(buf *bytes.Buffer, groups []string, attrs []Attr) 
 				buf.WriteString(groupPrefix)
 				buf.WriteString(h.sep)
 			}
-			buf.WriteString(a.String())
+			str := a.Value.String()
+			if needsQuoting(str) {
+				str = strconv.Quote(str)
+			}
+			buf.WriteString(a.Key + "=" + str)
 		}
 	}
 }
