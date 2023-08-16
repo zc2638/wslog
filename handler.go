@@ -54,12 +54,13 @@ type logHandler struct {
 
 func (h *logHandler) clone() *logHandler {
 	return &logHandler{
+		mu:         h.mu, // mutex shared among all clones of this handler
 		w:          h.w,
 		opts:       h.opts,
 		sep:        h.sep,
 		groups:     slices.Clip(h.groups),
 		attrBuffer: h.attrBuffer,
-		mu:         h.mu, // mutex shared among all clones of this handler
+		colorful:   h.colorful,
 	}
 }
 
@@ -161,16 +162,27 @@ func (h *logHandler) addAttrs(buf *bytes.Buffer, groups []string, attrs []Attr) 
 		switch a.Key {
 		case LevelKey:
 			levelStr := a.Value.String()
-			lsLen := len(levelStr)
-			if lsLen > 4 {
+
+			format := "%-4s"
+			if h.colorful {
+				colorNum := "32"
+				switch SLevel(strings.ToLower(levelStr)) {
+				case SLevelDebug:
+					colorNum = "37"
+				case SLevelInfo:
+					colorNum = "36"
+				case SLevelWarn:
+					colorNum = "33"
+				case SLevelError:
+					colorNum = "31"
+				}
+				format = "\u001B[" + colorNum + "m%-4s\u001b[0m"
+			}
+
+			if len(levelStr) > 4 {
 				levelStr = levelStr[:4]
 			}
-			buf.WriteString(levelStr)
-			if lsLen < 4 {
-				for i := lsLen; i < 4; i++ {
-					buf.WriteString(" ")
-				}
-			}
+			buf.WriteString(fmt.Sprintf(format, levelStr))
 		case TimeKey:
 			buf.WriteString("[")
 			if kind == KindTime {
@@ -192,7 +204,9 @@ func (h *logHandler) addAttrs(buf *bytes.Buffer, groups []string, attrs []Attr) 
 			if needsQuoting(str) {
 				str = strconv.Quote(str)
 			}
-			buf.WriteString(a.Key + "=" + str)
+			buf.WriteString(a.Key)
+			buf.WriteString("=")
+			buf.WriteString(str)
 		}
 	}
 }
