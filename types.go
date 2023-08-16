@@ -16,8 +16,6 @@ package wslog
 
 import (
 	"log/slog"
-	"unicode"
-	"unicode/utf8"
 )
 
 type (
@@ -104,22 +102,13 @@ func needsQuoting(s string) bool {
 	if len(s) == 0 {
 		return true
 	}
-	for i := 0; i < len(s); {
-		b := s[i]
-		if b < utf8.RuneSelf {
-			// Quote anything except a backslash that would need quoting in a
-			// JSON string, as well as space and '='
-			if b != '\\' && (b == ' ' || b == '=') {
-				return true
-			}
-			i++
-			continue
-		}
-		r, size := utf8.DecodeRuneInString(s[i:])
-		if r == utf8.RuneError || unicode.IsSpace(r) || !unicode.IsPrint(r) {
+	for _, b := range s {
+		if !((b >= 'a' && b <= 'z') ||
+			(b >= 'A' && b <= 'Z') ||
+			(b >= '0' && b <= '9') ||
+			b == '-' || b == '.' || b == '_' || b == '/' || b == '@' || b == '^' || b == '+') {
 			return true
 		}
-		i += size
 	}
 	return false
 }
