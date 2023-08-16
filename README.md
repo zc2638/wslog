@@ -6,6 +6,14 @@ In order to ensure only relying on the standard library, the `lumberjack` packag
 
 If you don't know how to configure log rolling, please refer to [lumberjack](https://github.com/natefinch/lumberjack).
 
+### Definition
+
+#### Format
+
+- `json` represents the JSON format log
+- `text` represents the Text format log
+- others represent the default Log format log
+
 ### Examples
 
 ```go
@@ -13,84 +21,87 @@ package main
 
 import (
 	"github.com/zc2638/wslog"
-	"log/slog"
 )
 
 func main() {
 	cfg := wslog.Confg{
 		Format: "json",
-		Level:  wslog.LevelInfo,
+		Level:  "info",
 	}
 	l := wslog.New(cfg)
-	l.Info("this is a info log")
-	l.Log(1, "this is a info+1 log")
+	l.Info("the info log")
+	l.Log(wslog.LevelInfo+1, "the info+1 log")
+	l.Log(1, "another info+1 log")
 }
 ```
 
-Support digital definition level.  
+Support digital definition level.
+
 ```go
 cfg := wslog.Confg{
-    Format: "json",
-    Level:  "info+2", // equivalent to `slog.LevelInfo+2`
+Format: "json",
+Level:  "info+2", // equivalent to `slog.LevelInfo+2`
 }
 ```
 
 Use with context
+
 ```go
 originLogger := wslog.New(cfg)
 ctx := wslog.WithContext(context.Backgroud(), originLogger)
 l := wslog.FromContext(ctx)
-l.Info("this is a info log")
+l.Info("the info log")
 ```
 
 You can get the built-in `level` to realize the `level` change during the running of the program.
 
 ```go
-level := l.Level().(*slog.LevelVar)
-level.Set(slog.LevelInfo)
+level := l.Level().(*LevelVar)
+level.Set(LevelInfo)
 ```
 
 You can use a custom leveler.
 
 ```go
-level := new(slog.LevelVar)
-wslog.New(cfg, wslog.LevelOption(level))
+level := new(LevelVar)
+wslog.New(cfg, level)
 ```
 
 You can use a custom handler.
 
 ```go
-handler := slog.NewJSONHandler(os.Stdout, nil)
-wslog.New(cfg, wslog.HandlerOption(handler))
+handler := wslog.NewLogHandler(os.Stdout, nil)
+wslog.New(cfg, handler)
 ```
 
 You can use a custom writer.
 
 ```go
-wslog.New(cfg, wslog.WriterOption(os.Stdout))
+wslog.New(cfg, io.Writer(os.Stdout))
 ```
 
 Log rolling is built in by default, you can also use the `lumberjack` package as a `writer`.
+
 ```go
 w := &lumberjack.Logger{}
-wslog.New(cfg, wslog.WriterOption(w))
+wslog.New(cfg, io.Writer(w))
 ```
 
 You may want to replace some `key` associated content in the log by default.
 
 ```go
-replaceAttrFunc := func (groups []string, a slog.Attr) slog.Attr {
-    // Remove time.
-    if a.Key == slog.TimeKey && len(groups) == 0 {
-        return slog.Attr{}
-    }
-    // Remove the directory from the source's filename.
-    if a.Key == slog.SourceKey {
-        source := a.Value.Any().(*slog.Source)
-        source.File = filepath.Base(source.File)
-    }
-    return a
+replaceAttrFunc := func (groups []string, a Attr) Attr {
+// Remove time.
+if a.Key == slog.TimeKey && len(groups) == 0 {
+return slog.Attr{}
 }
-wslog.New(cfg, wslog.ReplaceAttrOption(replaceAttrFunc))
+// Remove the directory from the source's filename.
+if a.Key == slog.SourceKey {
+source := a.Value.Any().(*slog.Source)
+source.File = filepath.Base(source.File)
+}
+return a
+}
+wslog.New(cfg, replaceAttrFunc)
 ```
 

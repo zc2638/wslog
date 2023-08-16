@@ -23,20 +23,23 @@ import (
 
 var levelMux sync.Mutex
 
-var levelSet = map[Level]slog.Level{
-	LevelDebug: slog.LevelDebug,
-	LevelInfo:  slog.LevelInfo,
-	LevelWarn:  slog.LevelWarn,
-	LevelError: slog.LevelError,
+var levelSet = map[SLevel]Level{
+	SLevelDebug: LevelDebug,
+	SLevelInfo:  LevelInfo,
+	SLevelWarn:  LevelWarn,
+	SLevelError: LevelError,
 }
 
-func RegisterLevel(ls Level, ln slog.Level) {
+func RegisterLevel(ls SLevel, ln Level) {
+	if ls == "" {
+		return
+	}
 	levelMux.Lock()
 	levelSet[ls] = ln
 	levelMux.Unlock()
 }
 
-func ParseLevel(ls Level) slog.Level {
+func ParseLevel(ls SLevel) slog.Level {
 	levelMux.Lock()
 	defer levelMux.Unlock()
 	// If it does not exist, a zero value will be returned,
@@ -45,25 +48,25 @@ func ParseLevel(ls Level) slog.Level {
 }
 
 const (
-	LevelDebug Level = "debug"
-	LevelInfo  Level = "info"
-	LevelWarn  Level = "warn"
-	LevelError Level = "error"
+	SLevelDebug SLevel = "debug"
+	SLevelInfo  SLevel = "info"
+	SLevelWarn  SLevel = "warn"
+	SLevelError SLevel = "error"
 )
 
-type Level string
+type SLevel string
 
-func (l Level) String() string {
+func (l SLevel) String() string {
 	return string(l)
 }
 
-func (l Level) Level() slog.Level {
+func (l SLevel) Level() Level {
 	parts := strings.SplitN(l.String(), "+", 2)
 	kind := strings.ToLower(strings.TrimSpace(parts[0]))
-	level := ParseLevel(Level(kind))
+	level := ParseLevel(SLevel(kind))
 	if len(parts) != 2 {
 		return level
 	}
 	offset, _ := strconv.Atoi(strings.TrimSpace(parts[1]))
-	return level + slog.Level(offset)
+	return level + Level(offset)
 }

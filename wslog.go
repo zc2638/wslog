@@ -17,6 +17,7 @@ package wslog
 import (
 	"context"
 	"fmt"
+	"io"
 	"log/slog"
 	"os"
 	"strings"
@@ -24,9 +25,12 @@ import (
 )
 
 type Config struct {
-	Level  Level  `json:"level,omitempty" yaml:"level,omitempty"`
+	Level  SLevel `json:"level,omitempty" yaml:"level,omitempty"`
 	Format string `json:"format,omitempty" yaml:"format,omitempty"`
 	Source bool   `json:"source,omitempty" yaml:"source,omitempty"`
+
+	// only use for default log handler
+	Colorful bool `json:"colorful,omitempty" yaml:"colorful,omitempty"`
 
 	Filename   string `json:"filename,omitempty" yaml:"filename,omitempty"`
 	MaxSize    int    `json:"maxSize,omitempty" yaml:"maxSize,omitempty"`
@@ -36,36 +40,61 @@ type Config struct {
 	Compress   bool   `json:"compress,omitempty" yaml:"compress,omitempty"`
 }
 
-func New(cfg Config, opts ...Option) *Logger {
-	writer := NewWriter(cfg)
-	level := new(slog.LevelVar)
-	level.Set(cfg.Level.Level())
-
-	params := &Params{Writer: writer, Level: level}
-	for _, v := range opts {
-		v(params)
+func (c *Config) HandlerOptions() *HandlerOptions {
+	level := new(LevelVar)
+	level.Set(c.Level.Level())
+	return &HandlerOptions{
+		AddSource: c.Source,
+		Level:     level,
 	}
+}
 
-	opt := &slog.HandlerOptions{
-		AddSource:   cfg.Source,
-		Level:       params.Level,
-		ReplaceAttr: params.ReplaceAttr,
-	}
+func (c *Config) Writer() io.Writer {
+	return NewWriter(*c)
+}
 
-	if params.Handler == nil {
-		if strings.ToLower(cfg.Format) == "json" {
-			params.Handler = slog.NewJSONHandler(writer, opt)
-		} else {
-			params.Handler = slog.NewTextHandler(writer, opt)
+func New(cfg Config, opts ...any) *Logger {
+	handlerOpts := cfg.HandlerOptions()
+
+	var (
+		handler Handler
+		writer  io.Writer
+	)
+	for _, opt := range opts {
+		switch v := opt.(type) {
+		case io.Writer:
+			writer = v
+		case *HandlerOptions:
+			if v != nil {
+				handlerOpts = v
+			}
+		case func(groups []string, a Attr) Attr:
+			handlerOpts.ReplaceAttr = v
+		case Leveler:
+			handlerOpts.Level = v
+		case Handler:
+			handler = v
 		}
 	}
-	return NewLogger(params.Handler, params.Level, params.Writer)
+
+	if handler == nil {
+		writer = cfg.Writer()
+		switch strings.ToLower(cfg.Format) {
+		case "json":
+			handler = slog.NewJSONHandler(writer, handlerOpts)
+		case "text":
+			handler = slog.NewTextHandler(writer, handlerOpts)
+		default:
+			handler = NewLogHandler(writer, handlerOpts)
+		}
+	}
+	return NewLogger(handler)
 }
 
 var defaultLogger atomic.Value
 
 func init() {
-	defaultLogger.Store(NewLogger(slog.NewTextHandler(os.Stdout, nil)))
+	defaultLogger.Store(NewLogger(NewLogHandler(os.Stdout, nil)))
 }
 
 // Default returns the default Logger.
@@ -85,80 +114,80 @@ func With(args ...any) *Logger {
 
 // Debug calls Logger.Debug on the default logger.
 func Debug(msg string, args ...any) {
-	Default().log(emptyCtx, slog.LevelDebug, msg, args...)
+	Default().log(emptyCtx, LevelDebug, msg, args...)
 }
 
 // Debugf calls Logger.Debugf on the default logger.
 func Debugf(format string, args ...any) {
-	Default().log(emptyCtx, slog.LevelDebug, fmt.Sprintf(format, args...))
+	Default().log(emptyCtx, LevelDebug, fmt.Sprintf(format, args...))
 }
 
 // DebugCtx calls Logger.DebugCtx on the default logger.
 func DebugCtx(ctx context.Context, msg string, args ...any) {
-	Default().log(ctx, slog.LevelDebug, msg, args...)
+	Default().log(ctx, LevelDebug, msg, args...)
 }
 
 // Info calls Logger.Info on the default logger.
 func Info(msg string, args ...any) {
-	Default().log(emptyCtx, slog.LevelInfo, msg, args...)
+	Default().log(emptyCtx, LevelInfo, msg, args...)
 }
 
 // Infof calls Logger.Infof on the default logger.
 func Infof(format string, args ...any) {
-	Default().log(emptyCtx, slog.LevelInfo, fmt.Sprintf(format, args...))
+	Default().log(emptyCtx, LevelInfo, fmt.Sprintf(format, args...))
 }
 
 // InfoCtx calls Logger.InfoCtx on the default logger.
 func InfoCtx(ctx context.Context, msg string, args ...any) {
-	Default().log(ctx, slog.LevelInfo, msg, args...)
+	Default().log(ctx, LevelInfo, msg, args...)
 }
 
 // Warn calls Logger.Warn on the default logger.
 func Warn(msg string, args ...any) {
-	Default().log(emptyCtx, slog.LevelWarn, msg, args...)
+	Default().log(emptyCtx, LevelWarn, msg, args...)
 }
 
 // Warnf calls Logger.Warnf on the default logger.
 func Warnf(format string, args ...any) {
-	Default().log(emptyCtx, slog.LevelWarn, fmt.Sprintf(format, args...))
+	Default().log(emptyCtx, LevelWarn, fmt.Sprintf(format, args...))
 }
 
 // WarnCtx calls Logger.WarnCtx on the default logger.
 func WarnCtx(ctx context.Context, msg string, args ...any) {
-	Default().log(ctx, slog.LevelWarn, msg, args...)
+	Default().log(ctx, LevelWarn, msg, args...)
 }
 
 // Error calls Logger.Error on the default logger.
 func Error(msg string, args ...any) {
-	Default().log(emptyCtx, slog.LevelError, msg, args...)
+	Default().log(emptyCtx, LevelError, msg, args...)
 }
 
 // Errorf calls Logger.Errorf on the default logger.
 func Errorf(format string, args ...any) {
-	Default().log(emptyCtx, slog.LevelError, fmt.Sprintf(format, args...))
+	Default().log(emptyCtx, LevelError, fmt.Sprintf(format, args...))
 }
 
 // ErrorCtx calls Logger.ErrorCtx on the default logger.
 func ErrorCtx(ctx context.Context, msg string, args ...any) {
-	Default().log(ctx, slog.LevelError, msg, args...)
+	Default().log(ctx, LevelError, msg, args...)
 }
 
 // Log calls Logger.Log on the default logger.
-func Log(level slog.Level, msg string, args ...any) {
+func Log(level Level, msg string, args ...any) {
 	Default().log(emptyCtx, level, msg, args...)
 }
 
 // LogCtx calls Logger.LogCtx on the default logger.
-func LogCtx(ctx context.Context, level slog.Level, msg string, args ...any) {
+func LogCtx(ctx context.Context, level Level, msg string, args ...any) {
 	Default().log(ctx, level, msg, args...)
 }
 
 // LogAttrs calls Logger.LogAttrs on the default logger.
-func LogAttrs(level slog.Level, msg string, attrs ...slog.Attr) {
+func LogAttrs(level Level, msg string, attrs ...Attr) {
 	Default().logAttrs(emptyCtx, level, msg, attrs...)
 }
 
 // LogAttrsCtx calls Logger.LogAttrsCtx on the default logger.
-func LogAttrsCtx(ctx context.Context, level slog.Level, msg string, attrs ...slog.Attr) {
+func LogAttrsCtx(ctx context.Context, level Level, msg string, attrs ...Attr) {
 	Default().logAttrs(ctx, level, msg, attrs...)
 }

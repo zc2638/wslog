@@ -17,7 +17,6 @@ package wslog
 import (
 	"context"
 	"fmt"
-	"io"
 	"log/slog"
 	"runtime"
 	"time"
@@ -26,30 +25,20 @@ import (
 var emptyCtx = context.Background()
 
 // NewLogger creates a new Logger with the given non-nil Handler.
-func NewLogger(h slog.Handler, opts ...any) *Logger {
-	return NewLoggerSkip(h, 3, opts...)
+func NewLogger(h Handler) *Logger {
+	return NewLoggerSkip(h, 3)
 }
 
-func NewLoggerSkip(h slog.Handler, skip int, opts ...any) *Logger {
+func NewLoggerSkip(h Handler, skip int) *Logger {
 	if h == nil {
 		panic("nil Handler")
 	}
 	l := &Logger{handler: h, skip: skip}
-	for _, opt := range opts {
-		switch v := opt.(type) {
-		case slog.Leveler:
-			l.level = v
-		case io.Writer:
-			l.writer = v
-		}
-	}
 	return l
 }
 
 type Logger struct {
-	handler slog.Handler
-	level   slog.Leveler
-	writer  io.Writer
+	handler Handler
 	skip    int
 }
 
@@ -58,11 +47,7 @@ func (l *Logger) clone() *Logger {
 	return &c
 }
 
-func (l *Logger) Handler() slog.Handler { return l.handler }
-
-func (l *Logger) Level() slog.Leveler { return l.level }
-
-func (l *Logger) Writer() io.Writer { return l.writer }
+func (l *Logger) Handler() Handler { return l.handler }
 
 func (l *Logger) With(args ...any) *Logger {
 	if len(args) == 0 {
@@ -90,7 +75,7 @@ func (l *Logger) WithGroup(name string) *Logger {
 }
 
 // EnabledCtx reports whether l emits log records at the given context and level.
-func (l *Logger) EnabledCtx(ctx context.Context, level slog.Level) bool {
+func (l *Logger) EnabledCtx(ctx context.Context, level Level) bool {
 	if ctx == nil {
 		ctx = emptyCtx
 	}
@@ -98,7 +83,7 @@ func (l *Logger) EnabledCtx(ctx context.Context, level slog.Level) bool {
 }
 
 // Enabled reports whether l emits log records at the given level.
-func (l *Logger) Enabled(level slog.Level) bool {
+func (l *Logger) Enabled(level Level) bool {
 	return l.Handler().Enabled(emptyCtx, level)
 }
 
@@ -112,102 +97,87 @@ func (l *Logger) Enabled(level slog.Level) bool {
 //     the following argument is treated as the value and the two are combined
 //     into an Attr.
 //   - Otherwise, the argument is treated as a value with key `!BADKEY`.
-func (l *Logger) LogCtx(ctx context.Context, level slog.Level, msg string, args ...any) {
+func (l *Logger) LogCtx(ctx context.Context, level Level, msg string, args ...any) {
 	l.log(ctx, level, msg, args...)
 }
 
-func (l *Logger) Log(level slog.Level, msg string, args ...any) {
+func (l *Logger) Log(level Level, msg string, args ...any) {
 	l.log(emptyCtx, level, msg, args...)
 }
 
 // LogAttrsCtx is a more efficient version of [Logger.Log] that accepts only Attrs.
-func (l *Logger) LogAttrsCtx(ctx context.Context, level slog.Level, msg string, attrs ...slog.Attr) {
+func (l *Logger) LogAttrsCtx(ctx context.Context, level Level, msg string, attrs ...Attr) {
 	l.logAttrs(ctx, level, msg, attrs...)
 }
 
-func (l *Logger) LogAttrs(level slog.Level, msg string, attrs ...slog.Attr) {
+func (l *Logger) LogAttrs(level Level, msg string, attrs ...Attr) {
 	l.logAttrs(emptyCtx, level, msg, attrs...)
 }
 
 // Debug logs at LevelDebug.
 func (l *Logger) Debug(msg string, args ...any) {
-	l.log(emptyCtx, slog.LevelDebug, msg, args...)
+	l.log(emptyCtx, LevelDebug, msg, args...)
 }
 
 // Debugf logs at LevelDebug with the given format.
 func (l *Logger) Debugf(format string, args ...any) {
-	l.log(emptyCtx, slog.LevelDebug, fmt.Sprintf(format, args...))
+	l.log(emptyCtx, LevelDebug, fmt.Sprintf(format, args...))
 }
 
 // DebugCtx logs at LevelDebug with the given context.
 func (l *Logger) DebugCtx(ctx context.Context, msg string, args ...any) {
-	l.log(ctx, slog.LevelDebug, msg, args...)
-}
-
-// Print logs at LevelInfo.
-func (l *Logger) Print(msg string, args ...any) {
-	l.log(context.Background(), slog.LevelInfo, msg, args...)
-}
-
-// Printf logs at LevelInfo with the given format.
-func (l *Logger) Printf(format string, args ...any) {
-	l.log(emptyCtx, slog.LevelInfo, fmt.Sprintf(format, args...))
-}
-
-// PrintCtx logs at LevelInfo with the given context.
-func (l *Logger) PrintCtx(ctx context.Context, msg string, args ...any) {
-	l.log(ctx, slog.LevelInfo, msg, args...)
+	l.log(ctx, LevelDebug, msg, args...)
 }
 
 // Info logs at LevelInfo.
 func (l *Logger) Info(msg string, args ...any) {
-	l.log(context.Background(), slog.LevelInfo, msg, args...)
+	l.log(context.Background(), LevelInfo, msg, args...)
 }
 
 // Infof logs at LevelInfo with the given format.
 func (l *Logger) Infof(format string, args ...any) {
-	l.log(emptyCtx, slog.LevelInfo, fmt.Sprintf(format, args...))
+	l.log(emptyCtx, LevelInfo, fmt.Sprintf(format, args...))
 }
 
 // InfoCtx logs at LevelInfo with the given context.
 func (l *Logger) InfoCtx(ctx context.Context, msg string, args ...any) {
-	l.log(ctx, slog.LevelInfo, msg, args...)
+	l.log(ctx, LevelInfo, msg, args...)
 }
 
 // Warn logs at LevelWarn.
 func (l *Logger) Warn(msg string, args ...any) {
-	l.log(context.Background(), slog.LevelWarn, msg, args...)
+	l.log(context.Background(), LevelWarn, msg, args...)
 }
 
 // Warnf logs at LevelWarn with the given format.
 func (l *Logger) Warnf(format string, args ...any) {
-	l.log(emptyCtx, slog.LevelWarn, fmt.Sprintf(format, args...))
+	l.log(emptyCtx, LevelWarn, fmt.Sprintf(format, args...))
 }
 
 // WarnCtx logs at LevelWarn with the given context.
 func (l *Logger) WarnCtx(ctx context.Context, msg string, args ...any) {
-	l.log(ctx, slog.LevelWarn, msg, args...)
+	l.log(ctx, LevelWarn, msg, args...)
 }
 
 // Error logs at LevelError.
 func (l *Logger) Error(msg string, args ...any) {
-	l.log(emptyCtx, slog.LevelError, msg, args...)
+	l.log(emptyCtx, LevelError, msg, args...)
 }
 
 // Errorf logs at LevelError with the given format.
 func (l *Logger) Errorf(format string, args ...any) {
-	l.log(emptyCtx, slog.LevelError, fmt.Sprintf(format, args...))
+	l.log(emptyCtx, LevelError, fmt.Sprintf(format, args...))
 }
 
 // ErrorCtx logs at LevelError with the given context.
 func (l *Logger) ErrorCtx(ctx context.Context, msg string, args ...any) {
-	l.log(ctx, slog.LevelError, msg, args...)
+	l.log(ctx, LevelError, msg, args...)
 }
 
 // log is the low-level logging method for methods that take ...any.
 // It must always be called directly by an exported logging method
 // or function, because it uses a fixed call depth to obtain the pc.
-func (l *Logger) log(ctx context.Context, level slog.Level, msg string, args ...any) {
+func (l *Logger) log(ctx context.Context, level Level, msg string, args ...any) {
 	if !l.EnabledCtx(ctx, level) {
 		return
 	}
@@ -226,7 +196,7 @@ func (l *Logger) log(ctx context.Context, level slog.Level, msg string, args ...
 }
 
 // logAttrs is like [Logger.log], but for methods that take ...Attr.
-func (l *Logger) logAttrs(ctx context.Context, level slog.Level, msg string, attrs ...slog.Attr) {
+func (l *Logger) logAttrs(ctx context.Context, level Level, msg string, attrs ...Attr) {
 	if !l.EnabledCtx(ctx, level) {
 		return
 	}
