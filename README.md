@@ -39,8 +39,8 @@ Support digital definition level.
 
 ```go
 cfg := wslog.Confg{
-Format: "json",
-Level:  "info+2", // equivalent to `slog.LevelInfo+2`
+    Format: "json",
+    Level:  "info+2", // equivalent to `wslog.LevelInfo+2`
 }
 ```
 
@@ -60,21 +60,32 @@ level := l.Level().(*LevelVar)
 level.Set(LevelInfo)
 ```
 
-You can use a custom leveler.
+You can use a custom `Leveler`.
 
 ```go
 level := new(LevelVar)
 wslog.New(cfg, level)
 ```
 
-You can use a custom handler.
+You can use a custom `HandlerOptions`.
+
+```go
+cfg := wslog.Confg{
+    Format: "text",
+    Level:  "info",
+}
+handlerOptions := cfg.HandlerOptions()
+wslog.New(cfg, handlerOptions)
+```
+
+You can use a custom `Handler`.
 
 ```go
 handler := wslog.NewLogHandler(os.Stdout, nil)
 wslog.New(cfg, handler)
 ```
 
-You can use a custom writer.
+You can use a custom `io.Writer`.
 
 ```go
 wslog.New(cfg, io.Writer(os.Stdout))
@@ -91,16 +102,16 @@ You may want to replace some `key` associated content in the log by default.
 
 ```go
 replaceAttrFunc := func (groups []string, a Attr) Attr {
-// Remove time.
-if a.Key == slog.TimeKey && len(groups) == 0 {
-return slog.Attr{}
-}
-// Remove the directory from the source's filename.
-if a.Key == slog.SourceKey {
-source := a.Value.Any().(*slog.Source)
-source.File = filepath.Base(source.File)
-}
-return a
+    // Remove time.
+    if a.Key == slog.TimeKey && len(groups) == 0 {
+        return slog.Attr{}
+    }
+    // Remove the directory from the source's filename.
+    if a.Key == slog.SourceKey {
+        source := a.Value.Any().(*slog.Source)
+        source.File = filepath.Base(source.File)
+    }
+    return a
 }
 wslog.New(cfg, replaceAttrFunc)
 ```
