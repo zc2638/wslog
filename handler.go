@@ -28,16 +28,16 @@ import (
 	"time"
 )
 
-func NewLogHandler(w io.Writer, opts *HandlerOptions, colorful bool) Handler {
+func NewLogHandler(w io.Writer, opts *HandlerOptions, disableColor bool) Handler {
 	if opts == nil {
 		opts = new(HandlerOptions)
 	}
 	return &logHandler{
-		w:        w,
-		opts:     *opts,
-		mu:       new(sync.Mutex),
-		sep:      ".",
-		colorful: colorful,
+		w:            w,
+		opts:         *opts,
+		mu:           new(sync.Mutex),
+		sep:          ".",
+		disableColor: disableColor,
 	}
 }
 
@@ -46,21 +46,21 @@ type logHandler struct {
 	opts HandlerOptions
 	mu   *sync.Mutex
 
-	sep        string
-	groups     []string
-	attrBuffer bytes.Buffer
-	colorful   bool
+	sep          string
+	groups       []string
+	attrBuffer   bytes.Buffer
+	disableColor bool
 }
 
 func (h *logHandler) clone() *logHandler {
 	return &logHandler{
-		mu:         h.mu, // mutex shared among all clones of this handler
-		w:          h.w,
-		opts:       h.opts,
-		sep:        h.sep,
-		groups:     slices.Clip(h.groups),
-		attrBuffer: h.attrBuffer,
-		colorful:   h.colorful,
+		mu:           h.mu, // mutex shared among all clones of this handler
+		w:            h.w,
+		opts:         h.opts,
+		sep:          h.sep,
+		groups:       slices.Clip(h.groups),
+		attrBuffer:   h.attrBuffer,
+		disableColor: h.disableColor,
 	}
 }
 
@@ -164,7 +164,7 @@ func (h *logHandler) addAttrs(buf *bytes.Buffer, groups []string, attrs []Attr) 
 			levelStr := a.Value.String()
 
 			format := "%-4s"
-			if h.colorful {
+			if !h.disableColor {
 				colorNum := "32"
 				switch SLevel(strings.ToLower(levelStr)) {
 				case SLevelDebug:
@@ -176,7 +176,7 @@ func (h *logHandler) addAttrs(buf *bytes.Buffer, groups []string, attrs []Attr) 
 				case SLevelError:
 					colorNum = "31"
 				}
-				format = "\u001B[" + colorNum + "m%-4s\u001b[0m"
+				format = "\x1b[" + colorNum + "m%-4s\x1b[0m"
 			}
 
 			if len(levelStr) > 4 {

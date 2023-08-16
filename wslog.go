@@ -19,7 +19,6 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
-	"os"
 	"strings"
 	"sync/atomic"
 )
@@ -30,7 +29,7 @@ type Config struct {
 	Source bool   `json:"source,omitempty" yaml:"source,omitempty"`
 
 	// only use for default log handler
-	Colorful bool `json:"colorful,omitempty" yaml:"colorful,omitempty"`
+	DisableColor bool `json:"disableColor,omitempty" yaml:"disableColor,omitempty"`
 
 	Filename   string `json:"filename,omitempty" yaml:"filename,omitempty"`
 	MaxSize    int    `json:"maxSize,omitempty" yaml:"maxSize,omitempty"`
@@ -85,7 +84,7 @@ func New(cfg Config, opts ...any) *Logger {
 		case "text":
 			handler = slog.NewTextHandler(writer, handlerOpts)
 		default:
-			handler = NewLogHandler(writer, handlerOpts, cfg.Colorful)
+			handler = NewLogHandler(writer, handlerOpts, cfg.DisableColor)
 		}
 	}
 	return NewLogger(handler)
@@ -94,7 +93,7 @@ func New(cfg Config, opts ...any) *Logger {
 var defaultLogger atomic.Value
 
 func init() {
-	defaultLogger.Store(NewLogger(NewLogHandler(os.Stdout, nil, true)))
+	defaultLogger.Store(New(Config{}))
 }
 
 // Default returns the default Logger.
