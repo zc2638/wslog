@@ -97,15 +97,18 @@ func (h *logHandler) Handle(_ context.Context, record Record) error {
 		h.addAttrs(&defBuf, nil, []Attr{sourceAttr})
 	}
 
-	_, err := h.attrBuffer.WriteTo(&defBuf)
-	if err != nil {
-		return err
+	attrBytes := h.attrBuffer.Bytes()
+	if !h.disableColor {
+		slevel := SLevel(record.Level.String())
+		colorPrefix, colorSuffix := slevel.getColorPrefix(), slevel.getColorSuffix()
+		attrBytes = convertToColorKey(attrBytes, []byte(colorPrefix), []byte(colorSuffix))
 	}
+	defBuf.Write(attrBytes)
 	defBuf.WriteByte('\n')
 
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	_, err = h.w.Write(defBuf.Bytes())
+	_, err := h.w.Write(defBuf.Bytes())
 	return err
 }
 
@@ -162,27 +165,12 @@ func (h *logHandler) addAttrs(buf *bytes.Buffer, groups []string, attrs []Attr) 
 		switch a.Key {
 		case LevelKey:
 			levelStr := a.Value.String()
-
-			format := "%-4s"
 			if !h.disableColor {
-				colorNum := "32"
-				switch SLevel(strings.ToLower(levelStr)) {
-				case SLevelDebug:
-					colorNum = "37"
-				case SLevelInfo:
-					colorNum = "36"
-				case SLevelWarn:
-					colorNum = "33"
-				case SLevelError:
-					colorNum = "31"
-				}
-				format = "\x1b[" + colorNum + "m%-4s\x1b[0m"
+				slevel := SLevel(levelStr)
+				format := slevel.buildColorFormat("%s")
+				levelStr = fmt.Sprintf(format, levelStr)
 			}
-
-			if len(levelStr) > 4 {
-				levelStr = levelStr[:4]
-			}
-			buf.WriteString(fmt.Sprintf(format, levelStr))
+			buf.WriteString(levelStr)
 		case TimeKey:
 			buf.WriteString("[")
 			if kind == KindTime {

@@ -70,3 +70,36 @@ func (l SLevel) Level() Level {
 	offset, _ := strconv.Atoi(strings.TrimSpace(parts[1]))
 	return level + Level(offset)
 }
+
+func (l SLevel) getColorPrefix() string {
+	parts := strings.SplitN(string(l), "+", 2)
+
+	var level string
+	switch len(parts) {
+	case 1, 2:
+		level = parts[0]
+	default:
+		return "\x1b[32m"
+	}
+
+	switch SLevel(strings.ToLower(level)) {
+	case SLevelDebug:
+		return "\x1b[37m" // gray
+	case SLevelInfo:
+		return "\x1b[36m" // blue
+	case SLevelWarn:
+		return "\x1b[33m" // yellow
+	case SLevelError:
+		return "\x1b[31m" // red
+	default:
+		return "\x1b[32m" // green
+	}
+}
+
+func (l SLevel) getColorSuffix() string {
+	return "\x1b[0m"
+}
+
+func (l SLevel) buildColorFormat(format string) string {
+	return l.getColorPrefix() + format + l.getColorSuffix()
+}

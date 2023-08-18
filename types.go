@@ -15,6 +15,7 @@
 package wslog
 
 import (
+	"bytes"
 	"log/slog"
 )
 
@@ -111,4 +112,63 @@ func needsQuoting(s string) bool {
 		}
 	}
 	return false
+}
+
+const (
+	quoteChar = 34
+	splitChar = 61
+	sepChar   = 32
+)
+
+var quoteSuffix = []byte{quoteChar, sepChar}
+
+func convertToColorKey(b []byte, colorPrefix, colorSuffix []byte) []byte {
+	bl := len(b)
+	if bl == 0 {
+		return b
+	}
+
+	var buf bytes.Buffer
+	for {
+		index := bytes.IndexByte(b, splitChar)
+		if index == -1 {
+			buf.Write(b)
+			break
+		}
+
+		key := b[:index]
+		buf.Write(colorPrefix)
+		buf.Write(key)
+		buf.Write(colorSuffix)
+		buf.WriteByte(splitChar)
+
+		val := b[index+1:]
+		index = bytes.IndexByte(val, quoteChar)
+		// match quote prefix
+		if index == 0 {
+			buf.WriteByte(quoteChar)
+			val = val[1:]
+			index = bytes.Index(val, quoteSuffix)
+			// break when the quote suffix is not matched
+			if index == -1 {
+				buf.Write(val)
+				break
+			}
+			buf.Write(val[:index])
+			buf.Write(quoteSuffix)
+			b = val[index+2:]
+			continue
+		}
+
+		index = bytes.IndexByte(val, sepChar)
+		// break when the sep is not matched
+		if index == -1 {
+			buf.Write(val)
+			break
+		}
+		buf.Write(val[:index])
+		buf.WriteByte(sepChar)
+		b = val[index+1:]
+	}
+	return buf.Bytes()
 }
