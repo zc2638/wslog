@@ -53,8 +53,8 @@ cfg := wslog.Confg{
 Use with context
 
 ```go
-originLogger := wslog.New(cfg)
-ctx := wslog.WithContext(context.Backgroud(), originLogger)
+logger := wslog.New(cfg)
+ctx := wslog.WithContext(context.Backgroud(), logger)
 l := wslog.FromContext(ctx)
 l.Info("the info log")
 ```
@@ -62,14 +62,14 @@ l.Info("the info log")
 You can get the built-in `level` to realize the `level` change during the running of the program.
 
 ```go
-level := l.Level().(*LevelVar)
+level := l.Level().(*wslog.LevelVar)
 level.Set(LevelInfo)
 ```
 
 You can use a custom `Leveler`.
 
 ```go
-level := new(LevelVar)
+level := new(wslog.LevelVar)
 wslog.New(cfg, level)
 ```
 
@@ -122,3 +122,12 @@ replaceAttrFunc := func (groups []string, a Attr) Attr {
 wslog.New(cfg, replaceAttrFunc)
 ```
 
+You can combine multiple output sources.
+
+```go
+h1 := wslog.NewLogHandler(os.Stdout, nil, false)
+h2 := slog.NewJSONHandler(os.Stdout, nil)
+h3 := NewKafkaHandler() // custom writer, like kafka
+multiHandler := wslog.NewMultiHandler(h1, h2, h3)
+wslog.New(cfg, multiHandler)
+```

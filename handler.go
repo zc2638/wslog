@@ -17,6 +17,7 @@ package wslog
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -197,4 +198,47 @@ func (h *logHandler) addAttrs(buf *bytes.Buffer, groups []string, attrs []Attr) 
 			buf.WriteString(str)
 		}
 	}
+}
+
+func NewMultiHandler(handlers ...Handler) Handler {
+	return &multiHandler{handlers: handlers}
+}
+
+type multiHandler struct {
+	handlers []Handler
+}
+
+func (h *multiHandler) Enabled(ctx context.Context, level Level) bool {
+	for _, handler := range h.handlers {
+		if handler.Enabled(ctx, level) {
+			return true
+		}
+	}
+	return false
+}
+
+func (h *multiHandler) Handle(ctx context.Context, record Record) error {
+	var errs []error
+	for _, handler := range h.handlers {
+		if err := handler.Handle(ctx, record); err != nil {
+			errs = append(errs, err)
+		}
+	}
+	return errors.Join(errs...)
+}
+
+func (h *multiHandler) WithAttrs(attrs []Attr) Handler {
+	cp := &multiHandler{handlers: make([]Handler, len(h.handlers))}
+	for index, handler := range h.handlers {
+		cp.handlers[index] = handler.WithAttrs(attrs)
+	}
+	return cp
+}
+
+func (h *multiHandler) WithGroup(name string) Handler {
+	cp := &multiHandler{handlers: make([]Handler, len(h.handlers))}
+	for index, handler := range h.handlers {
+		cp.handlers[index] = handler.WithGroup(name)
+	}
+	return cp
 }
