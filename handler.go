@@ -158,7 +158,7 @@ func (h *logHandler) addAttrs(buf *bytes.Buffer, groups []string, attrs []Attr) 
 				if a.Key != "" {
 					g2 = append(g2, a.Key)
 				}
-				h.addAttrs(buf, g2, attrs)
+				h.addAttrs(buf, g2, as)
 			}
 			continue
 		}
