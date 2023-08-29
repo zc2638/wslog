@@ -115,9 +115,10 @@ func needsQuoting(s string) bool {
 }
 
 const (
-	quoteChar = 34
-	splitChar = 61
-	sepChar   = 32
+	quoteChar  = 34
+	splitChar  = 61
+	sepChar    = 32
+	escapeChar = 92
 )
 
 var quoteSuffix = []byte{quoteChar, sepChar}
@@ -148,15 +149,29 @@ func convertToColorKey(b []byte, colorPrefix, colorSuffix []byte) []byte {
 		if index == 0 {
 			buf.WriteByte(quoteChar)
 			val = val[1:]
-			index = bytes.Index(val, quoteSuffix)
-			// break when the quote suffix is not matched
-			if index == -1 {
-				buf.Write(val)
+
+			// 循环查找 结束符，如果找到转义的结束符，继续查找
+			var eof bool
+			for {
+				index = bytes.Index(val, quoteSuffix)
+				// break when the quote suffix is not matched
+				if index == -1 {
+					buf.Write(val)
+					eof = true
+					break
+				}
+
+				buf.Write(val[:index])
+				buf.Write(quoteSuffix)
+				if index > 0 && val[index-1] != escapeChar {
+					b = val[index+2:]
+					break
+				}
+				val = val[index+2:]
+			}
+			if eof {
 				break
 			}
-			buf.Write(val[:index])
-			buf.Write(quoteSuffix)
-			b = val[index+2:]
 			continue
 		}
 

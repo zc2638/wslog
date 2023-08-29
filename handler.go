@@ -74,7 +74,10 @@ func (h *logHandler) Enabled(_ context.Context, level Level) bool {
 }
 
 func (h *logHandler) Handle(_ context.Context, record Record) error {
-	var defBuf bytes.Buffer
+	var (
+		defBuf  bytes.Buffer
+		attrBuf bytes.Buffer
+	)
 
 	logTime := record.Time.Round(0)
 	defAttrs := []Attr{
@@ -95,16 +98,26 @@ func (h *logHandler) Handle(_ context.Context, record Record) error {
 			Line:     f.Line,
 		}
 		sourceAttr := slog.Any(SourceKey, source)
-		h.addAttrs(&defBuf, nil, []Attr{sourceAttr})
+		h.addAttrs(&attrBuf, nil, []Attr{sourceAttr})
 	}
 
-	attrBytes := h.attrBuffer.Bytes()
+	attrBuf.Write(h.attrBuffer.Bytes())
+	extraAttrs := make([]Attr, 0, record.NumAttrs())
+	record.Attrs(func(attr slog.Attr) bool {
+		extraAttrs = append(extraAttrs, attr)
+		return true
+	})
+	h.addAttrs(&attrBuf, nil, extraAttrs)
+
+	attrBytes := attrBuf.Bytes()
 	if !h.disableColor {
 		slevel := SLevel(record.Level.String())
 		colorPrefix, colorSuffix := slevel.getColorPrefix(), slevel.getColorSuffix()
 		attrBytes = convertToColorKey(attrBytes, []byte(colorPrefix), []byte(colorSuffix))
 	}
+
 	defBuf.Write(attrBytes)
+	// TODO write record attr
 	defBuf.WriteByte('\n')
 
 	h.mu.Lock()
